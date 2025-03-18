@@ -1,0 +1,9 @@
+{
+	"name": "masterkb1",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "d332c5df-28ec-410b-86db-003026ac32b6",
+		"tenantId": "4130bd39-7c53-419c-b1e5-8758d6d63f21"
+	}
+}
