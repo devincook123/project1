@@ -14,6 +14,10 @@
 			],
 			"sinks": [
 				{
+					"dataset": {
+						"referenceName": "AzureSqlTable3",
+						"type": "DatasetReference"
+					},
 					"name": "sink1"
 				}
 			],
@@ -40,8 +44,8 @@
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: false) ~> customerload",
-				"customerload derive(FirstName = regexExtract(Name, \"^(Mr|Mrs|Ms|Dr|Professor)\\\\.?\\\\s+(\\\\w+)\", 2),",
-				"          LastName = regexExtract(Name, \"^(Mr|Mrs|Ms|Dr|Professor)\\\\.?\\\\s+(\\\\w+)\", 2)) ~> nameextraction",
+				"customerload derive(FirstName = regexExtract(Name, \"^(Mr\\\\.|Mrs\\\\.|Ms\\\\.|Dr\\\\.|Prof\\\\.Miss)? ?([A-Za-z]+)\", 2),",
+				"          LastName = regexExtract(Name, \"^(Mr\\\\.|Mrs\\\\.|Ms\\\\.|Dr\\\\.|Prof\\\\.|Miss)? ?[A-Za-z]+\\\\s+([A-Za-z'-]+)\", 2)) ~> nameextraction",
 				"nameextraction derive(Phone = iif(\r",
 				"    length(replace(replace(replace(replace(Phone, ' ', ''), '-', ''), '(', ''), ')', '')) == 10,\r",
 				"    concat(\r",
@@ -54,8 +58,26 @@
 				"PhoneNumbers derive(Email = trim(lower(Email))) ~> Email",
 				"Email sink(allowSchemaDrift: false,",
 				"     validateSchema: true,",
-				"     skipDuplicateMapInputs: true,",
-				"     skipDuplicateMapOutputs: true) ~> sink1"
+				"     input(",
+				"          customer_id as integer,",
+				"          first_name as string,",
+				"          last_name as string,",
+				"          primary_email as string,",
+				"          phone_number as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          customer_id = CustomerID,",
+				"          first_name = Name,",
+				"          last_name = Name,",
+				"          primary_email = Email,",
+				"          phone_number = Phone",
+				"     )) ~> sink1"
 			]
 		}
 	}
