@@ -1,0 +1,62 @@
+{
+	"name": "dataflow1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DelimitedText1",
+						"type": "DatasetReference"
+					},
+					"name": "customerload"
+				}
+			],
+			"sinks": [
+				{
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "nameextraction"
+				},
+				{
+					"name": "PhoneNumbers"
+				},
+				{
+					"name": "Email"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          CustomerID as string,",
+				"          Name as string,",
+				"          Email as string,",
+				"          Phone as string,",
+				"          LastPurchaseDate as string,",
+				"          TotalSpent as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> customerload",
+				"customerload derive(FirstName = regexExtract(Name, \"^(Mr|Mrs|Ms|Dr|Professor)\\\\.?\\\\s+(\\\\w+)\", 2),",
+				"          LastName = regexExtract(Name, \"^(Mr|Mrs|Ms|Dr|Professor)\\\\.?\\\\s+(\\\\w+)\", 2)) ~> nameextraction",
+				"nameextraction derive(Phone = iif(\r",
+				"    length(replace(replace(replace(replace(Phone, ' ', ''), '-', ''), '(', ''), ')', '')) == 10,\r",
+				"    concat(\r",
+				"        '(', substring(replace(replace(replace(replace(Phone, ' ', ''), '-', ''), '(', ''), ')', ''), 0, 3), ') ',\r",
+				"        substring(replace(replace(replace(replace(Phone, ' ', ''), '-', ''), '(', ''), ')', ''), 3, 3), '-',\r",
+				"        substring(replace(replace(replace(replace(Phone, ' ', ''), '-', ''), '(', ''), ')', ''), 6, 4)\r",
+				"    ),\r",
+				"    ''\r",
+				")) ~> PhoneNumbers",
+				"PhoneNumbers derive(Email = trim(lower(Email))) ~> Email",
+				"Email sink(allowSchemaDrift: false,",
+				"     validateSchema: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1"
+			]
+		}
+	}
+}
