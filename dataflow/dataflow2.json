@@ -1,0 +1,62 @@
+{
+	"name": "dataflow2",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "CosmosDbNoSqlContainer2",
+						"type": "DatasetReference"
+					},
+					"name": "cosmosdb"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTable4",
+						"type": "DatasetReference"
+					},
+					"name": "sinkstagingemails"
+				}
+			],
+			"transformations": [
+				{
+					"name": "JsonEmailFormatting"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          CustomerID as integer,",
+				"          Profile as (FirstName as string, LastName as string, Email as string),",
+				"          Conversations as (ConversationID as string, Messages as (DateTime as string, Sender as string, Message as string)[])[]",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     inferDriftedColumnTypes: true,",
+				"     format: 'document') ~> cosmosdb",
+				"cosmosdb derive(email_address = trim(lower(toString(Profile.Email))),",
+				"          Profile = concat(Profile.FirstName, ' ', Profile.LastName),",
+				"          each(match(), ERROR_FUNCTION('') = ERROR_FUNCTION(''))) ~> JsonEmailFormatting",
+				"JsonEmailFormatting sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          alt_email_id as integer,",
+				"          customer_id as integer,",
+				"          email_address as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          alt_email_id = Conversations,",
+				"          email_address",
+				"     )) ~> sinkstagingemails"
+			]
+		}
+	}
+}
