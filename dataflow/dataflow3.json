@@ -1,0 +1,69 @@
+{
+	"name": "dataflow3",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "CosmosDbNoSqlContainer2",
+						"type": "DatasetReference"
+					},
+					"name": "conversation"
+				},
+				{
+					"name": "messages"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "flatten1"
+				},
+				{
+					"name": "SupportAgent"
+				},
+				{
+					"name": "Timestamp"
+				},
+				{
+					"name": "join1"
+				},
+				{
+					"name": "alterRow1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          CustomerID as integer,",
+				"          Profile as (FirstName as string, LastName as string, Email as string),",
+				"          Conversations as (ConversationID as string, Messages as (DateTime as string, Sender as string, Message as string)[])[]",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'document') ~> conversation",
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false) ~> messages",
+				"conversation foldDown(unroll(Conversations.Messages),",
+				"     mapColumn(",
+				"          MessageSender = Conversations.Messages.Sender,",
+				"          Messages = Conversations.Messages,",
+				"          SupportAgent = Conversations.Messages,",
+				"          Timestamp = Conversations.Messages.DateTime,",
+				"          ConversationID = Conversations.ConversationID",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> flatten1",
+				"flatten1 derive(SupportAgentName = toString(SupportAgent.Sender)) ~> SupportAgent",
+				"SupportAgent derive() ~> Timestamp",
+				"Timestamp join(ConversationID == ERROR_FUNCTION('')",
+				"     && Timestamp == ERROR_FUNCTION(''),",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join1",
+				"join1 alterRow(insertIf(isNull(existing_conversation_id))) ~> alterRow1"
+			]
+		}
+	}
+}
