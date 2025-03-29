@@ -28,17 +28,15 @@
 			],
 			"scriptLines": [
 				"source(output(",
-				"          CustomerID as integer,",
+				"          CustomerID as short,",
 				"          Profile as (FirstName as string, LastName as string, Email as string),",
-				"          Conversations as (ConversationID as string, Messages as (DateTime as string, Sender as string, Message as string)[])[]",
+				"          Conversations as (ConversationID as string, Messages as (DateTime as timestamp, Message as string, Sender as string, SupportAgent as string)[])[]",
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     inferDriftedColumnTypes: true,",
 				"     format: 'document') ~> cosmosdb",
 				"cosmosdb derive(email_address = trim(lower(toString(Profile.Email))),",
-				"          Profile = concat(Profile.FirstName, ' ', Profile.LastName),",
-				"          each(match(), ERROR_FUNCTION('') = ERROR_FUNCTION(''))) ~> JsonEmailFormatting",
+				"          Profile = concat(Profile.FirstName, ' ', Profile.LastName)) ~> JsonEmailFormatting",
 				"JsonEmailFormatting sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
@@ -53,8 +51,8 @@
 				"     format: 'table',",
 				"     errorHandlingOption: 'stopOnFirstError',",
 				"     mapColumn(",
-				"          alt_email_id = Conversations,",
-				"          email_address",
+				"          email_address,",
+				"          customer_id = CustomerID",
 				"     )) ~> sinkstagingemails"
 			]
 		}
